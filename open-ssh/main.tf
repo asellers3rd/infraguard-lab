@@ -1,6 +1,6 @@
-# INTENTIONALLY INSECURE — InfraGuard test scenario
-# Issue: Security group allows SSH (port 22) from 0.0.0.0/0
-# Expected fix: Restrict ingress to VPN CIDR (e.g., 10.0.0.0/8)
+# FIXED — InfraGuard remediation applied
+# Issue: Security group allowed SSH (port 22) from 0.0.0.0/0
+# Fix:   Restricted SSH ingress to VPN/corporate CIDR via var.allowed_ssh_cidr
 
 terraform {
   required_version = ">= 1.5.0"
@@ -34,13 +34,13 @@ resource "aws_security_group" "web_server" {
   description = "Security group for web server"
   vpc_id      = aws_vpc.main.id
 
-  # VIOLATION: SSH open to the entire internet
+  # FIXED: SSH restricted to VPN/corporate CIDR only
   ingress {
-    description = "SSH from anywhere"
+    description = "SSH from VPN/corporate network only"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [var.allowed_ssh_cidr]
   }
 
   ingress {
