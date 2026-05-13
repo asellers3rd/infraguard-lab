@@ -1,0 +1,91 @@
+name: infracost
+
+on:
+  pull_request:
+    paths:
+      - '**/*.tf'
+      - '.github/workflows/infracost.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      scenario: ${{ steps.list.outputs.scenario }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: list
+        run: |
+          changed=$(git diff --name-only "${{ github.event.pull_request.base.sha }}...HEAD" -- '*.tf' \
+            | awk -F/ 'NF>1 {print $1}' | sort -u | head -n1)
+          echo "First changed scenario: ${changed:-<none>}"
+          echo "scenario=${changed}" >> "$GITHUB_OUTPUT"
+
+  infracost:
+    needs: detect
+    if: needs.detect.outputs.scenario != ''
+    runs-on: ubuntu-latest
+    env:
+      INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
+      TF_ROOT: ${{ needs.detect.outputs.scenario }}
+    steps:
+      - name: Skip if API key missing
+        id: gate
+        run: |
+          if [ -z "${INFRACOST_API_KEY}" ]; then
+            echo "::warning::INFRACOST_API_KEY not set on this repo; skipping cost diff."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Infracost
+        if: steps.gate.outputs.skip == 'false'
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Checkout base branch
+        if: steps.gate.outputs.skip == 'false'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Generate Infracost baseline (main)
+        if: steps.gate.outputs.skip == 'false'
+        run: |
+          infracost breakdown \
+            --path="${TF_ROOT}" \
+            --format=json \
+            --out-file=/tmp/infracost-base.json
+
+      - name: Checkout PR branch
+        if: steps.gate.outputs.skip == 'false'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          clean: false
+
+      - name: Generate Infracost diff
+        if: steps.gate.outputs.skip == 'false'
+        run: |
+          infracost diff \
+            --path="${TF_ROOT}" \
+            --compare-to=/tmp/infracost-base.json \
+            --format=json \
+            --out-file=/tmp/infracost.json
+
+      - name: Post comment on PR
+        if: steps.gate.outputs.skip == 'false'
+        run: |
+          infracost comment github \
+            --path=/tmp/infracost.json \
+            --repo="${{ github.repository }}" \
+            --pull-request="${{ github.event.pull_request.number }}" \
+            --github-token="${{ secrets.GITHUB_TOKEN }}" \
+            --behavior=update

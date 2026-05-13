@@ -1,0 +1,60 @@
+name: terraform
+
+on:
+  pull_request:
+    paths:
+      - '**/*.tf'
+      - '.github/workflows/terraform.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      scenarios: ${{ steps.list.outputs.scenarios }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: list
+        run: |
+          changed=$(git diff --name-only "${{ github.event.pull_request.base.sha }}...HEAD" -- '*.tf' \
+            | awk -F/ 'NF>1 {print $1}' | sort -u)
+          json=$(printf '%s\n' "$changed" | jq -R . | jq -sc 'map(select(length>0))')
+          echo "Changed scenarios: $json"
+          echo "scenarios=$json" >> "$GITHUB_OUTPUT"
+
+  terraform:
+    needs: detect
+    if: needs.detect.outputs.scenarios != '[]' && needs.detect.outputs.scenarios != ''
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: ${{ fromJSON(needs.detect.outputs.scenarios) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.scenario }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
+      - name: terraform fmt (advisory)
+        id: fmt
+        run: terraform fmt -check -recursive -diff
+        continue-on-error: true
+
+      - name: terraform init
+        run: terraform init -backend=false -input=false
+
+      - name: terraform validate
+        run: terraform validate
+
+      - name: Surface fmt outcome
+        if: steps.fmt.outcome == 'failure'
+        run: echo "::notice::terraform fmt would reformat one or more files. Non-blocking."
