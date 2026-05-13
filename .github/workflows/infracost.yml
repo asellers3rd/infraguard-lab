@@ -86,10 +86,22 @@ jobs:
 
       - name: Post comment on PR
         if: steps.gate.outputs.skip == 'false'
+        # `infracost comment github` exits 1 when any Infracost Cloud governance
+        # policy (FinOps / tagging / guardrails) reports findings. The comment
+        # is still posted in that case — for this lab repo we surface those
+        # findings in the comment but don't block the check.
         run: |
+          set +e
           infracost comment github \
             --path=/tmp/infracost.json \
             --repo="${{ github.repository }}" \
             --pull-request="${{ github.event.pull_request.number }}" \
             --github-token="${{ secrets.GITHUB_TOKEN }}" \
             --behavior=update
+          rc=$?
+          if [ "$rc" -eq 0 ]; then
+            echo "::notice::Infracost comment posted; no governance findings."
+          else
+            echo "::notice::Infracost comment posted with governance findings (see PR comment)."
+          fi
+          exit 0
