@@ -54,15 +54,6 @@ jobs:
           infracost --version
           infracost configure set api_key "$INFRACOST_API_KEY"
 
-      # One-shot debug: prove the secret reaches the runner intact (length + md5 only;
-      # the value itself stays masked). Compare to the local key's md5.
-      - name: Debug API key shape
-        if: steps.gate.outputs.skip == 'false'
-        run: |
-          printf 'API key length: %d\n' "${#INFRACOST_API_KEY}"
-          printf 'API key md5:    %s\n' "$(printf '%s' "$INFRACOST_API_KEY" | md5sum | cut -d' ' -f1)"
-          printf 'API key prefix: %s\n' "${INFRACOST_API_KEY:0:4}"
-
       - name: Checkout base branch
         if: steps.gate.outputs.skip == 'false'
         uses: actions/checkout@v4
