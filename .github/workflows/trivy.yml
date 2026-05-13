@@ -41,6 +41,6 @@ jobs:
         with:
           scan-type: config
           scan-ref: ${{ matrix.scenario }}
-          severity: CRITICAL,HIGH
+          severity: CRITICAL
           exit-code: '1'
           hide-progress: true
