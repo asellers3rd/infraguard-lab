@@ -44,11 +44,15 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Setup Infracost
+      # Install Infracost CLI directly. The infracost/actions/setup@v3 action
+      # pins to an older CLI version that rejects current ico- tokens, so we
+      # fetch the latest installer instead.
+      - name: Install Infracost CLI
         if: steps.gate.outputs.skip == 'false'
-        uses: infracost/actions/setup@v3
-        with:
-          api-key: ${{ secrets.INFRACOST_API_KEY }}
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/infracost/infracost/master/scripts/install.sh | sh
+          infracost --version
+          infracost configure set api_key "$INFRACOST_API_KEY"
 
       - name: Checkout base branch
         if: steps.gate.outputs.skip == 'false'
