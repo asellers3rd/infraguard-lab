@@ -44,6 +44,7 @@ jobs:
           severity: CRITICAL
           exit-code: '1'
           hide-progress: true
+          trivyignores: ${{ matrix.scenario }}/.trivyignore
       - name: Trivy SARIF for agent feedback
         if: always()
         uses: aquasecurity/trivy-action@v0.36.0
@@ -55,6 +56,7 @@ jobs:
           output: trivy-${{ matrix.scenario }}.sarif
           exit-code: '0'
           hide-progress: true
+          trivyignores: ${{ matrix.scenario }}/.trivyignore
       - name: Upload SARIF artifact
         if: always()
         uses: actions/upload-artifact@v4
