@@ -36,7 +36,7 @@ jobs:
         scenario: ${{ fromJSON(needs.detect.outputs.scenarios) }}
     steps:
       - uses: actions/checkout@v4
-      - name: Trivy IaC scan
+      - name: Trivy IaC scan (gate)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
@@ -44,3 +44,21 @@ jobs:
           severity: CRITICAL
           exit-code: '1'
           hide-progress: true
+      - name: Trivy SARIF for agent feedback
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: ${{ matrix.scenario }}
+          severity: CRITICAL,HIGH
+          format: sarif
+          output: trivy-${{ matrix.scenario }}.sarif
+          exit-code: '0'
+          hide-progress: true
+      - name: Upload SARIF artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-sarif-${{ matrix.scenario }}
+          path: trivy-${{ matrix.scenario }}.sarif
+          retention-days: 7
