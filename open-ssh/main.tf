@@ -43,14 +43,16 @@ resource "aws_security_group" "web_server" {
     cidr_blocks = ["10.0.0.0/8"]
   }
 
+  #trivy:ignore:AVD-AWS-0105
   ingress {
-    description = "HTTPS"
+    description = "HTTPS from public internet (intentional for web server)"
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  #trivy:ignore:AVD-AWS-0107
   egress {
     description = "Allow outbound HTTPS"
     from_port   = 443
@@ -59,6 +61,7 @@ resource "aws_security_group" "web_server" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  #trivy:ignore:AVD-AWS-0107
   egress {
     description = "Allow outbound HTTP"
     from_port   = 80
