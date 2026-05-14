@@ -34,13 +34,13 @@ resource "aws_security_group" "web_server" {
   description = "Security group for web server"
   vpc_id      = aws_vpc.main.id
 
-  # VIOLATION: SSH open to the entire internet
+  # FIXED: SSH restricted to internal VPN CIDR only
   ingress {
-    description = "SSH from anywhere"
+    description = "SSH from VPN"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["10.0.0.0/8"]
   }
 
   ingress {
@@ -51,10 +51,28 @@ resource "aws_security_group" "web_server" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # FIXED: Replaced catch-all egress with port-specific rules
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "HTTPS outbound for package updates and API calls"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "HTTP outbound for package repositories"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "DNS resolution"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
