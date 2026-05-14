@@ -52,6 +52,7 @@ resource "aws_security_group" "web_server" {
   }
 
   egress {
+    description = "Allow all outbound traffic for web server internet access"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
