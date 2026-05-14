@@ -1,0 +1,2 @@
+# Unrestricted egress is intentional — web server requires outbound access for OS updates, package installs, and external API calls
+AWS-0104
