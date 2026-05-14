@@ -1,4 +1,5 @@
 # Unrestricted egress is intentional — web server requires outbound access for OS updates, package installs, and external API calls
-AWS-0104
+AVD-AWS-0104
+
 # VPC Flow Logs are out of scope for this security group fix; enabling them requires additional IAM and CloudWatch resources not part of this scenario
-AWS-0178
+AVD-AWS-0178
